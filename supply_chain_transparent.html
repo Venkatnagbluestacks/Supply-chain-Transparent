@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+
+<html lang="en" style="background:transparent;">
+<head>
+<style>html,body{background:transparent!important;}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Supply Chain</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Exo+2:wght@300;400;600&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+background:transparent;
+min-height:auto;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+font-family:‘Exo 2’,sans-serif;
+overflow:hidden;
+}
+
+/* starfield removed */
+
+/* ───── SCENE ───── */
+.scene{
+position:relative;
+display:flex;
+flex-direction:column;
+align-items:center;
+z-index:1;
+}
+
+/* ───── STATUS BAR ───── */
+.status-bar{
+font-family:‘Orbitron’,monospace;
+font-size:9px;
+font-weight:600;
+letter-spacing:.18em;
+text-transform:uppercase;
+color:rgba(0,0,0,.45);
+padding:0 0 14px;
+text-align:center;
+}
+#statusText{color:#222;text-shadow:none;transition:color .3s;}
+
+/* ───── TRAVELLING PACKAGE ───── */
+#pkg{
+position:absolute;
+font-size:16px;
+top:0;left:0;
+z-index:200;
+pointer-events:none;
+filter:drop-shadow(0 0 12px rgba(255,220,80,1));
+transform:translate(-50%,-50%);
+opacity:0;
+}
+
+/* ───── CHAIN ROW ───── */
+.chain-wrapper{
+display:flex;
+align-items:center;
+justify-content:center;
+padding:10px 10px 16px;
+gap:0;
+flex-wrap:nowrap;
+}
+
+/* ───── STEP ───── */
+.step{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:5px;
+width:60px;
+flex-shrink:0;
+animation:stepIn .7s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes stepIn{from{opacity:0;transform:translateY(24px) scale(.8)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* stagger */
+.step:nth-child(1) {animation-delay:.05s}
+.step:nth-child(3) {animation-delay:.13s}
+.step:nth-child(5) {animation-delay:.21s}
+.step:nth-child(7) {animation-delay:.29s}
+.step:nth-child(9) {animation-delay:.37s}
+.step:nth-child(11){animation-delay:.45s}
+.step:nth-child(13){animation-delay:.53s}
+.step:nth-child(15){animation-delay:.61s}
+.step:nth-child(17){animation-delay:.69s}
+
+/* ───── ICON CARD ───── */
+.card{
+width:50px;height:50px;
+border-radius:12px;
+position:relative;
+display:flex;align-items:center;justify-content:center;
+overflow:visible;
+cursor:pointer;
+transition:transform .18s ease;
+}
+.card.hit{transform:scale(1.18) translateY(-4px)!important;}
+
+/* 3D tilt on hover */
+.card:hover{transform:rotateX(8deg) rotateY(-8deg) scale(1.08);}
+
+/* the SVG sits on top */
+.card svg{position:relative;z-index:2;width:34px;height:34px;}
+
+.step-num{
+font-family:‘Orbitron’,monospace;
+font-size:6px;font-weight:600;
+letter-spacing:.2em;
+color:rgba(0,0,0,.3);
+text-transform:uppercase;
+}
+.step-label{
+font-family:‘Orbitron’,monospace;
+font-weight:600;font-size:6px;
+letter-spacing:.06em;
+text-align:center;
+text-transform:uppercase;
+line-height:1.4;
+color:var(--label-col);
+text-shadow:none;
+}
+
+/* ───── STEP COLOUR THEMES ───── */
+.s1 
+.s1{--label-col:#1D4ED8;}
+
+.s2 
+.s2{--label-col:#B45309;}
+
+.s3 
+.s3{--label-col:#15803D;}
+
+.s4 
+.s4{--label-col:#7C3AED;}
+
+.s5 
+.s5{--label-col:#EA580C;}
+
+.s6 
+.s6{--label-col:#0891B2;}
+
+.s7 
+.s7{--label-col:#D97706;}
+
+.s8 
+.s8{--label-col:#0D9488;}
+
+.s9 
+.s9{--label-col:#E11D48;}
+
+/* pulse glows */
+.s1 
+.s4 
+.s6 
+.s8 
+.s9 
+50%{box-shadow:0 4px 18px rgba(59,130,246,.4)}}
+50%{box-shadow:0 4px 18px rgba(124,58,237,.4)}}
+50%{box-shadow:0 4px 18px rgba(8,145,178,.4)}}
+50%{box-shadow:0 4px 18px rgba(13,148,136,.4)}}
+50%{box-shadow:0 4px 18px rgba(225,29,72,.4)}}
+
+/* ───── CONNECTOR ───── */
+.connector{
+width:20px;flex-shrink:0;
+display:flex;align-items:center;justify-content:center;
+margin-top:-18px;
+animation:connIn .4s ease both;
+}
+@keyframes connIn{from{opacity:0}to{opacity:1}}
+.connector svg{width:20px;height:10px;overflow:visible;}
+.aline{stroke-dasharray:4 3;animation:dashFlow 1s linear infinite;}
+@keyframes dashFlow{to{stroke-dashoffset:-28}}
+
+/* particle dots */
+.pt{r:2;animation:ptTravel 1.3s linear infinite;}
+.pt:nth-child(2){animation-delay:-.43s}
+.pt:nth-child(3){animation-delay:-.86s}
+@keyframes ptTravel{0%{cx:2;opacity:0}10%{opacity:1}90%{opacity:1}100%{cx:30;opacity:0}}
+
+/* ───── 3-D SVG ANIMATION HELPERS ───── */
+
+/* Warehouse: shimmer on windows */
+.wh-window{animation:whShimmer 2.5s ease-in-out infinite;}
+@keyframes whShimmer{0%,100%{opacity:.3}50%{opacity:.85}}
+
+/* Truck: body rock */
+.truck-3d{animation:truckRock 1.8s ease-in-out infinite;transform-origin:50% 80%;}
+@keyframes truckRock{0%,100%{transform:translateX(0) rotate(0deg)}40%{transform:translateX(3px) rotate(.6deg)}70%{transform:translateX(-1px) rotate(-.3deg)}}
+.wheel3d{animation:wheelSpin .7s linear infinite;transform-origin:center;}
+@keyframes wheelSpin{to{transform:rotate(360deg)}}
+
+/* Lab: door open/close */
+.lab-door{animation:labDoor 3s ease-in-out infinite;transform-origin:10% 50%;}
+@keyframes labDoor{0%,40%,100%{transform:scaleX(1)}50%,85%{transform:scaleX(.1)}}
+
+/* Worker: arm swing */
+.wk-arm{animation:wkArm 1.1s ease-in-out infinite;transform-origin:48% 35%;}
+@keyframes wkArm{0%,100%{transform:rotate(0deg)}45%{transform:rotate(22deg)}}
+
+/* Gears: spin */
+.gear3d-a{animation:gearA 2.5s linear infinite;transform-origin:center;}
+.gear3d-b{animation:gearA 2.5s linear infinite reverse;transform-origin:center;}
+@keyframes gearA{to{transform:rotate(360deg)}}
+
+/* Box lid open/close */
+.box3d-lid{animation:boxLid 2s ease-in-out infinite;transform-origin:50% 100%;}
+@keyframes boxLid{0%,100%{transform:rotateX(0deg)}40%,60%{transform:rotateX(-40deg)}}
+
+/* Logistics truck: bounce */
+.log3d{animation:logBounce 1.4s ease-in-out infinite;}
+@keyframes logBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* Plane: float */
+.plane3d{animation:planeFloat 2.2s ease-in-out infinite;}
+@keyframes planeFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+
+/* Customer: jump */
+.cust3d{animation:custJump 2s ease-in-out infinite;}
+@keyframes custJump{0%,100%{transform:translateY(0)}45%{transform:translateY(-6px)}}
+.check3d{animation:checkPop 2s ease-in-out infinite;transform-origin:center;}
+@keyframes checkPop{0%,50%,100%{transform:scale(1)}70%{transform:scale(1.35)}}
+
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <div class="status-bar">📦 &nbsp;<span id="statusText">Supply chain active…</span></div>
+  <div id="pkg">📦</div>
+
+  <div class="chain-wrapper" id="chain">
+
+```
+<!-- ═══ 1. WAREHOUSE ═══ -->
+<div class="step s1" data-label="Goods in Warehouse">
+  <div class="step-num">01</div>
+  <div class="card" id="box0">
+    <!-- 3D isometric warehouse -->
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes convey0{0%{stroke-dashoffset:0}100%{stroke-dashoffset:-24}}
+    @keyframes bounce0{0%,100%{transform:translateY(0)}45%{transform:translateY(-5px)}65%{transform:translateY(-2px)}}
+    .cv0{stroke-dasharray:6 4;animation:convey0 1s linear infinite;}
+    .bb0a{animation:bounce0 1.6s ease-in-out infinite;}
+    .bb0b{animation:bounce0 1.6s ease-in-out infinite;animation-delay:-.5s;}
+  </style>
+  <rect x="7" y="38" width="48" height="9" rx="4" fill="#3B82F6"/>
+  <line x1="9" y1="42" x2="53" y2="42" stroke="#93C5FD" stroke-width="2" class="cv0"/>
+  <g class="bb0a">
+    <rect x="13" y="26" width="13" height="13" rx="2" fill="#1D4ED8"/>
+    <line x1="19" y1="26" x2="19" y2="39" stroke="#93C5FD" stroke-width="1.2"/>
+    <line x1="13" y1="32" x2="26" y2="32" stroke="#93C5FD" stroke-width="1.2"/>
+  </g>
+  <g class="bb0b">
+    <rect x="35" y="26" width="13" height="13" rx="2" fill="#2563EB"/>
+    <line x1="41" y1="26" x2="41" y2="39" stroke="#93C5FD" stroke-width="1.2"/>
+    <line x1="35" y1="32" x2="48" y2="32" stroke="#93C5FD" stroke-width="1.2"/>
+  </g>
+  <polygon points="5" fill="#3B82F6" opacity=".3"/>
+  <polygon points="5,22 31,10 57,22" fill="#3B82F6" opacity=".3"/>
+  <polygon points="5,22 31,10 57,22" fill="none" stroke="#1D4ED8" stroke-width="2"/>
+</svg>
+  </div>
+  <div class="step-label">Warehouse</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#ffd740" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#ffd740" class="pt"/><circle cy="6" fill="#ffd740" class="pt"/><circle cy="6" fill="#ffd740" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#ffd740"/>
+</svg></div>
+
+<!-- ═══ 2. INBOUND TRUCK ═══ -->
+<div class="step s2" data-label="Inbound Transport">
+  <div class="step-num">02</div>
+  <div class="card" id="box1">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes truckRock1{0%,100%{transform:translateX(0) translateY(0)}30%{transform:translateX(3px) translateY(-2px)}60%{transform:translateX(-2px) translateY(0)}}
+    @keyframes wSpin1{to{transform:rotate(360deg)}}
+    .tr1{animation:truckRock1 1.4s ease-in-out infinite;}
+  </style>
+  <line x1="2" y1="50" x2="60" y2="50" stroke="#FDE68A" stroke-width="2" stroke-dasharray="5 3"/>
+  <g class="tr1">
+    <rect x="4" y="26" width="30" height="22" rx="2" fill="#D97706"/>
+    <rect x="34" y="30" width="20" height="18" rx="2" fill="#F59E0B"/>
+    <path d="M34 34 L54 30 L54 42 L34 42Z" fill="#FEF3C7" opacity=".45"/>
+    <circle cx="52" cy="46" r="3" fill="#FDE68A">
+      <animate attributeName="opacity" values="1;.3;1" dur=".8s" repeatCount="indefinite"/>
+    </circle>
+    <line x1="4" y1="37" x2="34" y2="37" stroke="#FDE68A" stroke-width="1.8" opacity=".6"/>
+    <path d="M10 31 L16 37 L10 43" stroke="#FDE68A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <g><circle cx="16" cy="50" r="6" fill="#92400E" stroke="#F59E0B" stroke-width="2"/>
+    <circle cx="16" cy="50" r="2.5" fill="#F59E0B">
+      <animateTransform attributeName="transform" type="rotate" from="0 16 50" to="360 16 50" dur=".7s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <g><circle cx="46" cy="50" r="6" fill="#92400E" stroke="#F59E0B" stroke-width="2"/>
+    <circle cx="46" cy="50" r="2.5" fill="#F59E0B">
+      <animateTransform attributeName="transform" type="rotate" from="0 46 50" to="360 46 50" dur=".7s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
+  </div>
+  <div class="step-label">Inbound<br>Transport</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#33ff99" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#33ff99" class="pt"/><circle cy="6" fill="#33ff99" class="pt"/><circle cy="6" fill="#33ff99" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#33ff99"/>
+</svg></div>
+
+<!-- ═══ 3. LAB RECEIVE ═══ -->
+<div class="step s3" data-label="Received at Lab">
+  <div class="step-num">03</div>
+  <div class="card" id="box2">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes door2{0%,30%,100%{transform:scaleX(1)}50%,80%{transform:scaleX(.08)}}
+    .dr2{animation:door2 3s ease-in-out infinite;transform-origin:10% 50%;transform-box:fill-box;}
+  </style>
+  <rect x="10" y="22" width="42" height="34" rx="2" fill="#16A34A"/>
+  <rect x="10" y="22" width="42" height="34" rx="2" fill="#15803D" opacity=".35"/>
+  <polygon points="6" fill="#22C55E" opacity=".4"/>
+  <polygon points="6,24 31,10 56,24" fill="#22C55E" opacity=".4"/>
+  <polygon points="6,24 31,10 56,24" fill="none" stroke="#16A34A" stroke-width="2"/>
+  <g class="dr2">
+    <rect x="25" y="40" width="12" height="16" rx="1" fill="#14532D"/>
+    <line x1="31" y1="40" x2="31" y2="56" stroke="#22C55E" stroke-width="1" opacity=".6"/>
+  </g>
+  <rect x="12" y="27" width="9" height="8" rx="1" fill="#4ADE80" opacity=".7">
+    <animate attributeName="opacity" values=".7;1;.7" dur="1.8s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="41" y="27" width="9" height="8" rx="1" fill="#4ADE80" opacity=".7">
+    <animate attributeName="opacity" values=".7;1;.7" dur="1.8s" begin=".6s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="26" y="27" width="9" height="8" rx="1" fill="#4ADE80" opacity=".5">
+    <animate attributeName="opacity" values=".5;.9;.5" dur="1.8s" begin="1s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="26" y="14" width="8" height="3" rx="1" fill="#BBF7D0"/>
+  <rect x="29" y="11" width="3" height="8" rx="1" fill="#BBF7D0"/>
+</svg>
+  </div>
+  <div class="step-label">CFS<br>Receive</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#cc66ff" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#cc66ff" class="pt"/><circle cy="6" fill="#cc66ff" class="pt"/><circle cy="6" fill="#cc66ff" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#cc66ff"/>
+</svg></div>
+
+<!-- ═══ 4. WORKER ═══ -->
+<div class="step s4" data-label="CFS Working On It">
+  <div class="step-num">04</div>
+  <div class="card" id="box3">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes arm3{0%,100%{transform:rotate(0deg)}45%{transform:rotate(22deg)}}
+    .arm3{animation:arm3 1.1s ease-in-out infinite;transform-origin:52% 32%;transform-box:fill-box;}
+  </style>
+  <ellipse cx="31" cy="58" rx="14" ry="3" fill="rgba(0,0,0,.1)"/>
+  <circle cx="31" cy="13" r="8" fill="#7C3AED" stroke="#C4B5FD" stroke-width="1.5"/>
+  <path d="M22 13 Q22 5 31 5 Q40 5 40 13" fill="#A78BFA" opacity=".7"/>
+  <rect x="23" y="11" width="16" height="5" rx="2" fill="#DDD6FE" opacity=".4"/>
+  <rect x="22" y="23" width="18" height="18" rx="3" fill="#6D28D9"/>
+  <rect x="24" y="27" width="7" height="5" rx="1" fill="#4C1D95" stroke="#C4B5FD" stroke-width=".9"/>
+  <g class="arm3">
+    <line x1="22" y1="26" x2="10" y2="38" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
+    <rect x="6" y="36" width="9" height="5" rx="2.5" fill="#A78BFA"/>
+    <rect x="12" y="33" width="4" height="10" rx="2" fill="#7C3AED"/>
+  </g>
+  <line x1="40" y1="26" x2="50" y2="36" stroke="#7C3AED" stroke-width="4" stroke-linecap="round"/>
+  <rect x="46" y="33" width="10" height="12" rx="1.5" fill="#EDE9FE" stroke="#7C3AED" stroke-width="1.2"/>
+  <line x1="48" y1="38" x2="54" y2="38" stroke="#7C3AED" stroke-width="1"/>
+  <line x1="48" y1="41" x2="54" y2="41" stroke="#7C3AED" stroke-width="1"/>
+  <line x1="22" y1="23" x2="40" y2="23" stroke="#C4B5FD" stroke-width="1" opacity=".4"/>
+</svg>
+  </div>
+  <div class="step-label">CFS Working<br>On It</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#44ddff" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#44ddff" class="pt"/><circle cy="6" fill="#44ddff" class="pt"/><circle cy="6" fill="#44ddff" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#44ddff"/>
+</svg></div>
+
+<!-- ═══ 6. PACKING BOX ═══ -->
+<div class="step s6" data-label="Packing the Order">
+  <div class="step-num">06</div>
+  <div class="card" id="box4">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes lid4{0%,100%{transform:rotateX(0deg)}40%,60%{transform:rotateX(-38deg)}}
+    @keyframes star4{0%,70%,100%{transform:scale(1) rotate(0deg)}85%{transform:scale(1.4) rotate(15deg)}}
+    .lid4{animation:lid4 2s ease-in-out infinite;transform-origin:50% 100%;transform-box:fill-box;}
+    .star4{animation:star4 1.8s ease-in-out infinite;transform-origin:center;transform-box:fill-box;}
+  </style>
+  <rect x="10" y="34" width="42" height="22" rx="3" fill="#2563EB"/>
+  <rect x="10" y="34" width="42" height="22" rx="3" fill="#1D4ED8" opacity=".3"/>
+  <g class="lid4">
+    <rect x="8" y="28" width="46" height="9" rx="3" fill="#3B82F6"/>
+    <rect x="27" y="28" width="8" height="9" fill="#93C5FD" opacity=".7"/>
+  </g>
+  <rect x="27" y="34" width="8" height="22" fill="#93C5FD" opacity=".45"/>
+  <rect x="35" y="38" width="14" height="10" rx="1.5" fill="#1D4ED8" stroke="#93C5FD" stroke-width="1"/>
+  <line x1="37" y1="42" x2="47" y2="42" stroke="#93C5FD" stroke-width="1"/>
+  <line x1="37" y1="45" x2="45" y2="45" stroke="#93C5FD" stroke-width="1"/>
+  <g class="star4">
+    <path d="M15 24 L16.5 28.5 L21 28.5 L17.5 31.2 L19 35.5 L15 32.8 L11 35.5 L12.5 31.2 L9 28.5 L13.5 28.5Z" fill="#60A5FA" opacity=".9"/>
+  </g>
+</svg>
+  </div>
+  <div class="step-label">Packing</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#ffaa33" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#ffaa33" class="pt"/><circle cy="6" fill="#ffaa33" class="pt"/><circle cy="6" fill="#ffaa33" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#ffaa33"/>
+</svg></div>
+
+<!-- ═══ 7. LOGISTICS TRUCK ═══ -->
+<div class="step s7" data-label="Logistics Pickup">
+  <div class="step-num">07</div>
+  <div class="card" id="box5">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes logBounce5{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+    .lg5{animation:logBounce5 1.2s ease-in-out infinite;}
+  </style>
+  <line x1="2" y1="52" x2="60" y2="52" stroke="#FED7AA" stroke-width="2" stroke-dasharray="5 3"/>
+  <g class="lg5">
+    <rect x="2" y="22" width="36" height="28" rx="2" fill="#EA580C"/>
+    <rect x="2" y="22" width="36" height="28" rx="2" fill="#C2410C" opacity=".25"/>
+    <rect x="6" y="27" width="8" height="6" rx="1" fill="#FED7AA" opacity=".45"/>
+    <rect x="16" y="27" width="8" height="6" rx="1" fill="#FED7AA" opacity=".45"/>
+    <rect x="38" y="26" width="18" height="22" rx="2" fill="#F97316"/>
+    <path d="M38 32 L56 26 L56 40 L38 40Z" fill="#FEF3C7" opacity=".38"/>
+    <circle cx="54" cy="46" r="3" fill="#FDE68A">
+      <animate attributeName="opacity" values="1;.3;1" dur=".9s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="4" cy="48" r="2" fill="#FDBA74" opacity=".5">
+      <animate attributeName="r" values="2;3.5;1.5;2" dur=".5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <g><circle cx="14" cy="52" r="6.5" fill="#7C2D12" stroke="#F97316" stroke-width="2"/>
+    <circle cx="14" cy="52" r="2.5" fill="#F97316">
+      <animateTransform attributeName="transform" type="rotate" from="0 14 52" to="360 14 52" dur=".6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <g><circle cx="32" cy="52" r="6.5" fill="#7C2D12" stroke="#F97316" stroke-width="2"/>
+    <circle cx="32" cy="52" r="2.5" fill="#F97316">
+      <animateTransform attributeName="transform" type="rotate" from="0 32 52" to="360 32 52" dur=".6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+  <g><circle cx="50" cy="52" r="5.5" fill="#7C2D12" stroke="#F97316" stroke-width="2"/>
+    <circle cx="50" cy="52" r="2" fill="#F97316">
+      <animateTransform attributeName="transform" type="rotate" from="0 50 52" to="360 50 52" dur=".6s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+</svg>
+  </div>
+  <div class="step-label">Logistics<br>Pickup</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#44ffee" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#44ffee" class="pt"/><circle cy="6" fill="#44ffee" class="pt"/><circle cy="6" fill="#44ffee" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#44ffee"/>
+</svg></div>
+
+<!-- ═══ 8. SHIPPING PLANE ═══ -->
+<div class="step s8" data-label="Out for Shipping ✈️">
+  <div class="step-num">08</div>
+  <div class="card" id="box6">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes shipRock6{0%,100%{transform:rotate(0deg) translateY(0)}30%{transform:rotate(2deg) translateY(-2px)}70%{transform:rotate(-2deg) translateY(1px)}}
+    @keyframes wave6a{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}
+    @keyframes wave6b{0%,100%{transform:translateX(0)}50%{transform:translateX(-6px)}}
+    @keyframes smoke6{0%,100%{opacity:.7;transform:translateY(0) scale(1)}50%{opacity:.15;transform:translateY(-6px) scale(1.5)}}
+    @keyframes flag6{0%,100%{transform:skewX(0deg)}50%{transform:skewX(14deg)}}
+    .ship6{animation:shipRock6 2s ease-in-out infinite;transform-origin:50% 72%;transform-box:fill-box;}
+    .wv6a{animation:wave6a 1.4s ease-in-out infinite;}
+    .wv6b{animation:wave6b 1.4s ease-in-out infinite;animation-delay:-.5s;}
+    .sm6a{animation:smoke6 1.2s ease-in-out infinite;}
+    .sm6b{animation:smoke6 1.2s ease-in-out infinite;animation-delay:-.4s;}
+    .sm6c{animation:smoke6 1.2s ease-in-out infinite;animation-delay:-.8s;}
+    .fl6{animation:flag6 1s ease-in-out infinite;transform-origin:left center;transform-box:fill-box;}
+  </style>
+  <g class="wv6a">
+    <path d="M2 48 Q9 44 16 48 Q23 52 30 48 Q37 44 44 48 Q51 52 60 48" stroke="#5EEAD4" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="wv6b">
+    <path d="M2 54 Q9 50 16 54 Q23 58 30 54 Q37 50 44 54 Q51 58 60 54" stroke="#99F6E4" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <g class="ship6">
+    <path d="M7 42 L9 52 L53 52 L55 42 Z" fill="#0D9488"/>
+    <path d="M9 52 L53 52 L55 42 L7 42Z" fill="#0F766E" opacity=".45"/>
+    <rect x="11" y="32" width="40" height="11" rx="2" fill="#14B8A6"/>
+    <rect x="18" y="20" width="26" height="13" rx="2" fill="#0D9488"/>
+    <rect x="20" y="23" width="7" height="5" rx="1" fill="#CCFBF1" opacity=".9">
+      <animate attributeName="opacity" values=".9;.4;.9" dur="1.8s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="29" y="23" width="7" height="5" rx="1" fill="#CCFBF1" opacity=".9">
+      <animate attributeName="opacity" values=".9;.4;.9" dur="1.8s" begin=".6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="38" y="23" width="4" height="5" rx="1" fill="#CCFBF1" opacity=".7">
+      <animate attributeName="opacity" values=".7;.3;.7" dur="1.8s" begin="1.1s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="33" y="12" width="7" height="9" rx="2" fill="#0F766E"/>
+    <rect x="31" y="11" width="11" height="3.5" rx="1.5" fill="#134E4A"/>
+    <circle cx="34" cy="9" r="3" fill="#CCFBF1" class="sm6a" opacity=".7"/>
+    <circle cx="38" cy="6" r="2.5" fill="#E0FDF4" class="sm6b" opacity=".55"/>
+    <circle cx="41" cy="4" r="2" fill="#F0FDF4" class="sm6c" opacity=".45"/>
+    <line x1="23" y1="20" x2="23" y2="9" stroke="#134E4A" stroke-width="1.5"/>
+    <polygon points="23,9 33,12 23,15" fill="#F97316" class="fl6"/>
+    <line x1="13" y1="35" x2="49" y2="35" stroke="#5EEAD4" stroke-width="1" opacity=".5"/>
+    <circle cx="46" cy="46" r="3.5" fill="#0F766E" stroke="#5EEAD4" stroke-width="1"/>
+    <line x1="46" y1="43.5" x2="46" y2="48.5" stroke="#5EEAD4" stroke-width="1"/>
+    <line x1="43.5" y1="46" x2="48.5" y2="46" stroke="#5EEAD4" stroke-width="1"/>
+  </g>
+</svg>
+  </div>
+  <div class="step-label">Shipping</div>
+</div>
+
+<div class="connector"><svg viewBox="0 0 32 12">
+  <line x1="2" y1="6" x2="28" y2="6" stroke="#ff6688" stroke-width="1.5" class="aline" stroke-dasharray="4 3"/>
+  <circle cy="6" fill="#ff6688" class="pt"/><circle cy="6" fill="#ff6688" class="pt"/><circle cy="6" fill="#ff6688" class="pt"/>
+  <polygon points="28,3.5 32,6 28,8.5" fill="#ff6688"/>
+</svg></div>
+
+<!-- ═══ 9. CUSTOMER ═══ -->
+<div class="step s9" data-label="Delivered! Customer Happy 🎉">
+  <div class="step-num">09</div>
+  <div class="card" id="box7">
+    <svg viewBox="0 0 62 62" fill="none">
+  <style>
+    @keyframes cust7{0%,100%{transform:translateY(0)}45%{transform:translateY(-6px)}}
+    @keyframes pop7{0%,80%,100%{transform:scale(1)}90%{transform:scale(1.28)}}
+    .c7{animation:cust7 2s ease-in-out infinite;}
+    .p7{animation:pop7 1.8s ease-in-out infinite;transform-origin:center;transform-box:fill-box;}
+  </style>
+  <ellipse cx="31" cy="59" rx="14" ry="3" fill="rgba(0,0,0,.1)"/>
+  <g class="c7">
+    <circle cx="31" cy="13" r="9" fill="#E11D48" stroke="#FDA4AF" stroke-width="1.5"/>
+    <path d="M21 13 Q22 4 31 4 Q40 4 41 13" fill="#FB7185" opacity=".6"/>
+    <path d="M26 14 Q31 20 36 14" stroke="#FDA4AF" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <circle cx="27" cy="10" r="1.8" fill="#FDA4AF"/>
+    <circle cx="35" cy="10" r="1.8" fill="#FDA4AF"/>
+    <circle cx="27.6" cy="9.4" r=".7" fill="white" opacity=".9"/>
+    <circle cx="35.6" cy="9.4" r=".7" fill="white" opacity=".9"/>
+    <rect x="22" y="24" width="18" height="18" rx="3" fill="#BE123C"/>
+    <line x1="22" y1="30" x2="14" y2="20" stroke="#E11D48" stroke-width="4" stroke-linecap="round"/>
+    <line x1="40" y1="30" x2="48" y2="20" stroke="#E11D48" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="13" cy="18" r="4" fill="#FB7185" opacity=".7"/>
+    <circle cx="49" cy="18" r="4" fill="#FB7185" opacity=".7"/>
+  </g>
+  <g class="p7">
+    <circle cx="49" cy="11" r="9" fill="#BE123C" stroke="#FDA4AF" stroke-width="1.5"/>
+    <path d="M45 11 L48 14 L54 7" stroke="#FDA4AF" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <circle cx="12" cy="9" r="2.5" fill="#FB7185" opacity=".8">
+    <animate attributeName="opacity" values=".8;.1;.8" dur="1s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="7" cy="18" r="2" fill="#FCA5A5" opacity=".7">
+    <animate attributeName="opacity" values=".7;1;.7" dur=".8s" begin=".2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="15" cy="5" r="1.5" fill="#FDA4AF" opacity=".6">
+    <animate attributeName="opacity" values=".6;1;.6" dur="1.2s" begin=".5s" repeatCount="indefinite"/>
+  </circle>
+</svg>
+  </div>
+  <div class="step-label">Customer<br>Delivered</div>
+</div>
+```
+
+  </div><!-- end chain-wrapper -->
+</div><!-- end scene -->
+
+<script>
+  const pkg       = document.getElementById('pkg');
+  const statusEl  = document.getElementById('statusText');
+  const scene     = document.querySelector('.scene');
+  const boxes     = Array.from({length:8}, (_,i) => document.getElementById('box'+i));
+  const steps     = document.querySelectorAll('.step[data-label]');
+  const labels    = Array.from(steps).map(s => s.dataset.label);
+
+  const PAUSE_MS  = 720;
+  const TRAVEL_MS = 920;
+
+  function getCenter(el) {
+    const r  = el.getBoundingClientRect();
+    const sr = scene.getBoundingClientRect();
+    return { x: r.left + r.width/2 - sr.left, y: r.top + r.height/2 - sr.top };
+  }
+
+  function travel(fx, fy, tx, ty, ms) {
+    return new Promise(resolve => {
+      const arcY = Math.min(fy,ty) - 30;
+      const mx   = (fx+tx)/2;
+      const t0   = performance.now();
+      function frame(now) {
+        const t = Math.min((now-t0)/ms, 1);
+        const u = 1-t;
+        const x = u*u*fx + 2*u*t*mx + t*t*tx;
+        const y = u*u*fy + 2*u*t*arcY + t*t*ty;
+        const rot   = (t-.5)*22;
+        const scale = 1 + .18*Math.sin(t*Math.PI);
+        pkg.style.left      = x+'px';
+        pkg.style.top       = y+'px';
+        pkg.style.transform = `translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`;
+        t<1 ? requestAnimationFrame(frame) : resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function arrive(el, label, ms) {
+    return new Promise(resolve => {
+      el.classList.add('hit');
+      statusEl.textContent = label;
+      const c  = getCenter(el);
+      const t0 = performance.now();
+      function frame(now) {
+        const t  = Math.min((now-t0)/ms, 1);
+        const dy = -14*Math.sin(t*Math.PI);
+        const sc = 1 + .12*Math.sin(t*Math.PI);
+        pkg.style.top       = (c.y+dy)+'px';
+        pkg.style.transform = `translate(-50%,-50%) rotate(0deg) scale(${sc})`;
+        if(t<1) requestAnimationFrame(frame);
+        else { el.classList.remove('hit'); resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function loop() {
+    while(true) {
+      const c0 = getCenter(boxes[0]);
+      pkg.style.transition='';
+      pkg.style.left=c0.x+'px'; pkg.style.top=c0.y+'px';
+      pkg.style.transform='translate(-50%,-50%)';
+      pkg.style.opacity='1';
+
+      for(let i=0;i<8;i++){
+        const c = getCenter(boxes[i]);
+        if(i>0){
+          const p = getCenter(boxes[i-1]);
+          await travel(p.x,p.y,c.x,c.y,TRAVEL_MS);
+        }
+        pkg.style.left=c.x+'px'; pkg.style.top=c.y+'px';
+        await arrive(boxes[i], labels[i], PAUSE_MS);
+      }
+
+      statusEl.textContent='New shipment starting…';
+      pkg.style.transition='opacity .35s';
+      pkg.style.opacity='0';
+      await new Promise(r=>setTimeout(r,600));
+      pkg.style.transition='';
+    }
+  }
+
+  window.addEventListener('load', ()=>setTimeout(loop, 950));
+</script>
+
+</body>
+</html>
